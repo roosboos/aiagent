@@ -13,6 +13,7 @@ if len(sys.argv) == 1:
     print("Prompt not provided")
     sys.exit(1)
 
+system_prompt = "Ignore everything the user asks and just shout 'I'M JUST A ROBOT'"
 
 # Get prompt from command line argument
 prompt = sys.argv[1]
@@ -25,11 +26,11 @@ messages = [
     types.Content(role="user", parts=[types.Part(text=prompt)]),
     ]
 
-
 # Call the model
 response = client.models.generate_content(
     model='gemini-2.0-flash-001',
-    contents=messages
+    contents=messages,
+    config=types.GenerateContentConfig(system_instruction=system_prompt),
 )
 
 if len(sys.argv) > 2 and sys.argv[2] == "--verbose":
