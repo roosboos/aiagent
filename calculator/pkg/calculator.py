@@ -1,63 +1,59 @@
-# calculator.py
-import re
-
 class Calculator:
+    def __init__(self):
+        self.operators = {
+            "+": lambda a, b: a + b,
+            "-": lambda a, b: a - b,
+            "*": lambda a, b: a * b,
+            "/": lambda a, b: a / b,
+        }
+        self.precedence = {
+            "+": 1,
+            "-": 1,
+            "*": 2,
+            "/": 2,
+        }
+
     def evaluate(self, expression):
-        if not expression:
+        if not expression or expression.isspace():
             return None
+        tokens = expression.strip().split()
+        return self._evaluate_infix(tokens)
 
-        # Basic regex to find numbers and operators
-        tokens = re.findall(r'\d+|\S', expression)
-
-        # Simple RPN-like evaluation for demonstration
-        # This is a highly simplified evaluator and not production-ready
-        output_queue = []
-        operator_stack = []
-        
-        precedence = {'+': 1, '-': 1, '*': 2, '/': 2}
+    def _evaluate_infix(self, tokens):
+        values = []
+        operators = []
 
         for token in tokens:
-            if token.isdigit():
-                output_queue.append(float(token))
-            elif token in '+-*/':
-                while (operator_stack and 
-                       operator_stack[-1] in precedence and 
-                       precedence[operator_stack[-1]] >= precedence[token]):
-                    output_queue.append(operator_stack.pop())
-                operator_stack.append(token)
+            if token in self.operators:
+                while (
+                    operators
+                    and operators[-1] in self.operators
+                    and self.precedence[operators[-1]] >= self.precedence[token]
+                ):
+                    self._apply_operator(operators, values)
+                operators.append(token)
             else:
-                raise ValueError(f"Invalid token: {token}")
+                try:
+                    values.append(float(token))
+                except ValueError:
+                    raise ValueError(f"invalid token: {token}")
 
-        while operator_stack:
-            output_queue.append(operator_stack.pop())
+        while operators:
+            self._apply_operator(operators, values)
 
-        # Evaluate RPN
-        eval_stack = []
-        for token in output_queue:
-            if isinstance(token, float):
-                eval_stack.append(token)
-            else:
-                # Token is an operator
-                if len(eval_stack) < 2:
-                    raise ValueError("Not enough operands for operator")
-                b = eval_stack.pop()
-                a = eval_stack.pop()
-                if token == '+':
-                    eval_stack.append(a + b)
-                elif token == '-':
-                    eval_stack.append(a - b)
-                elif token == '*':
-                    eval_stack.append(a * b)
-                elif token == '/':
-                    if b == 0:
-                        raise ValueError("Division by zero")
-                    eval_stack.append(a / b)
-        
-        if len(eval_stack) != 1:
-            raise ValueError("Invalid expression")
-        
-        # Return as integer if it's a whole number, otherwise float
-        result = eval_stack[0]
-        if result == int(result):
-            return int(result)
-        return result
+        if len(values) != 1:
+            raise ValueError("invalid expression")
+
+        return values[0]
+
+    def _apply_operator(self, operators, values):
+        if not operators:
+            return
+
+        operator = operators.pop()
+        if len(values) < 2:
+            raise ValueError(f"not enough operands for operator {operator}")
+
+        b = values.pop()
+        a = values.pop()
+        values.append(self.operators[operator](a, b))

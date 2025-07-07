@@ -1,43 +1,30 @@
 import os
 from google.genai import types
 
+
 def get_files_info(working_directory, directory=None):
-    if directory is None:
-        directory = working_directory
-        
-    abs_working = os.path.abspath(working_directory)
-    
-    # Key fix: if directory is relative, make it relative to working_directory
-    if os.path.isabs(directory):
-        target_path = directory
-    else:
-        target_path = os.path.join(working_directory, directory)
-    
-    abs_dir = os.path.abspath(target_path)
-
-    if not abs_dir.startswith(abs_working):
+    abs_working_dir = os.path.abspath(working_directory)
+    target_dir = abs_working_dir
+    if directory:
+        target_dir = os.path.abspath(os.path.join(working_directory, directory))
+    if not target_dir.startswith(abs_working_dir):
         return f'Error: Cannot list "{directory}" as it is outside the permitted working directory'
-    
-    if os.path.isdir(abs_dir) == False:
+    if not os.path.isdir(target_dir):
         return f'Error: "{directory}" is not a directory'
-    
     try:
-        contents = os.listdir(abs_dir)
-
-        formatted_items = []
-
-        for content in contents:
-            combined = os.path.join(abs_dir, content)
-            if os.path.isdir(combined) == True:
-                dir_file_size = os.path.getsize(combined)
-                formatted_items.append(f"- {content}: file_size={dir_file_size} bytes, is_dir=True")
-            else:
-                file_file_size = os.path.getsize(combined)
-                formatted_items.append(f"- {content}: file_size={file_file_size} bytes, is_dir=False")
-    
-        return "\n".join(formatted_items)
+        files_info = []
+        for filename in os.listdir(target_dir):
+            filepath = os.path.join(target_dir, filename)
+            file_size = 0
+            is_dir = os.path.isdir(filepath)
+            file_size = os.path.getsize(filepath)
+            files_info.append(
+                f"- {filename}: file_size={file_size} bytes, is_dir={is_dir}"
+            )
+        return "\n".join(files_info)
     except Exception as e:
-        return f"Error: Something unexpected occured: {e}"
+        return f"Error listing files: {e}"
+
 
 schema_get_files_info = types.FunctionDeclaration(
     name="get_files_info",
@@ -48,52 +35,6 @@ schema_get_files_info = types.FunctionDeclaration(
             "directory": types.Schema(
                 type=types.Type.STRING,
                 description="The directory to list files from, relative to the working directory. If not provided, lists files in the working directory itself.",
-            ),
-        },
-    ),
-)
-
-schema_get_file_content = types.FunctionDeclaration(
-    name="get_file_content",
-    description="Returns the contents of a file as a string, constrained to the working directory.",
-    parameters=types.Schema(
-        type=types.Type.OBJECT,
-        properties={
-            "file_path": types.Schema(
-             type=types.Type.STRING,
-             description="The file path to the file you are getting the content of, relative to the working directory."
-            ),
-        },
-    ),
-)
-
-schema_run_python_file = types.FunctionDeclaration(
-    name="run_python_file",
-    description= "Allows the LLM to run code within the working directory, with a 30 second time limit to prevent it running indefinitely.",
-    parameters=types.Schema(
-        type=types.Type.OBJECT,
-        properties={
-            "file_path": types.Schema(
-                type=types.Type.STRING,
-                description="Path to the Python file to run, relative to the working directory."
-            ),
-        },
-    ),
-)
-
-schema_write_file = types.FunctionDeclaration(
-    name="write_file",
-    description= "Allows the LLM to write and overwrite files within the working directory.",
-    parameters=types.Schema(
-        type=types.Type.OBJECT,
-        properties={
-            "file_path": types.Schema(
-                type=types.Type.STRING,
-                description="Path to the file to write, relative to the working directory."
-            ),
-            "content": types.Schema(
-                type=types.Type.STRING,
-                description="The string content to write to the file."
             ),
         },
     ),
